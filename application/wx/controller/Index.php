@@ -353,6 +353,15 @@ class Index extends Collection
         }elseif ($type == 'B022'){
             $result = $Super->create_single_meeting($data);
             return $result;
+        }elseif ($type == 'B022'){
+            $result = $Super->create_single_meeting($data);
+            return $result;
+        }elseif ($type == 'B023'){
+            $result = $Super->be_start($data);
+            return $result;
+        }elseif ($type == 'B024'){
+            $result = $Super->be_end($data);
+            return $result;
         }elseif ($type == 'BBBB'){
 //            //搜索出勤详情导出
 //            $result = $Super->in(COMMON_PATH.'static/member.xlsx');

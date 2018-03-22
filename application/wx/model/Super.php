@@ -504,10 +504,11 @@ class Super extends BaseModel
             foreach ($info as $v){
                 $re = $user->where([
                     'id' => $v['user_id']
-                ])->field(['username,major'])->find();
+                ])->field(['username,major,number'])->find();
                 $member[$i]['user_id'] = $v['user_id'];
                 $member[$i]['username'] = $re['username'];
                 $member[$i]['major'] = $re['major'];
+                $member[$i]['number'] = $re['number'];
                 if ($state == '未开始'){
                     $member[$i]['status'] = '未开始';
                 }elseif ($state == '已开始'){
@@ -2599,6 +2600,143 @@ class Super extends BaseModel
         return json([
             'code' => 200,
             'msg' => config('setting.image_root').'static/sign_out.png'
+        ]);
+    }
+
+    public function be_start($data){
+        $TokenModel = new Token();
+        $id = $TokenModel->get_id();
+        $secret = $TokenModel->checkUser();
+        if ($secret != 32){
+            exit(json_encode([
+                'code' => 403,
+                'msg' => '权限不足！'
+            ]));
+        }
+        if (!array_key_exists('id',$data)){
+            exit(json_encode([
+                'code' => 400,
+                'msg' => '未传入会议标识！'
+            ]));
+        }
+        (new IDMustBeNumber())->goToCheck($data);
+        $id = $data['id'];
+
+        $check = Db::table('meeting')->where([
+            'id' => $id
+        ])->field('begin,end_time')->find();
+
+        $begin = $check['begin'];
+        $end = $check['end_time'];
+        $time = (int)time();
+        if ($time>=$end){
+            exit(json_encode([
+                'code' => 400,
+                'msg' => '该会议已结束'
+            ]));
+        }
+        if ($begin != $time){
+            Db::startTrans();
+            $result = Db::table('meeting')
+                ->update([
+                    'begin' => $time
+                ]);
+
+            if (!$result){
+                Db::rollback();
+                exit(json_encode([
+                    'code' => 503,
+                    'msg' => '更新出错，可能是参数出错'
+                ]));
+            }
+            $re = Db::table('meeting')
+                ->where([
+                    'meeting_id' => $id
+                ])
+                ->update([
+                    'begin' => $time
+                ]);
+            if (!$re){
+                Db::rollback();
+                exit(json_encode([
+                    'code' => 503,
+                    'msg' => '更新出错，可能是参数出错'
+                ]));
+            }
+            Db::commit();
+        }
+        return json([
+            'code' => 200,
+            'msg' => '修改成功'
+        ]);
+    }
+
+    public function be_end($data){
+        $TokenModel = new Token();
+        $id = $TokenModel->get_id();
+        $secret = $TokenModel->checkUser();
+        if ($secret != 32){
+            exit(json_encode([
+                'code' => 403,
+                'msg' => '权限不足！'
+            ]));
+        }
+        if (!array_key_exists('id',$data)){
+            exit(json_encode([
+                'code' => 400,
+                'msg' => '未传入会议标识！'
+            ]));
+        }
+        (new IDMustBeNumber())->goToCheck($data);
+        $id = $data['id'];
+
+        $check = Db::table('meeting')->where([
+            'id' => $id
+        ])->field('begin,end_time')->find();
+
+        $begin = $check['begin'];
+        $end = $check['end_time'];
+        $time = (int)time();
+        if ($time<=$begin){
+            exit(json_encode([
+                'code' => 400,
+                'msg' => '该会议未开始'
+            ]));
+        }
+        if ($end != $time){
+            Db::startTrans();
+            $result = Db::table('meeting')
+                ->update([
+                    'end_time' => $time
+                ]);
+
+            if (!$result){
+                Db::rollback();
+                exit(json_encode([
+                    'code' => 503,
+                    'msg' => '更新出错，可能是参数出错'
+                ]));
+            }
+            $re = Db::table('meeting')
+                ->where([
+                    'meeting_id' => $id
+                ])
+                ->update([
+                    'end_time' => $time
+                ]);
+            if (!$re){
+                Db::rollback();
+                exit(json_encode([
+                    'code' => 503,
+                    'msg' => '更新出错，可能是参数出错'
+                ]));
+            }
+            Db::commit();
+        }
+
+        return json([
+            'code' => 200,
+            'msg' => '修改成功'
         ]);
     }
 
